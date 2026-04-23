@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #0b0f1a; color: white; padding: 20px; }
+        .box { max-width: 500px; margin: auto; background: #1e293b; padding: 25px; border-radius: 20px; }
+        input { padding: 12px; width: 100%; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; background: #38bdf8; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+        .list-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; font-family: monospace; }
+        h3 { border-bottom: 2px solid #38bdf8; display: inline-block; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <script>if(localStorage.getItem('reyz_auth') !== 'true') window.location.href='/';</script>
+
+    <div class="box">
+        <h3>📱 Manage Nomor (GitHub)</h3>
+        <input type="number" id="num" placeholder="Nomor Baru (628...)">
+        <button class="btn" onclick="addNum()">SIMPAN KE GITHUB</button>
+        <div id="list" style="max-height: 200px; overflow-y: auto; margin-bottom: 30px;"></div>
+
+        <h3>👤 Tambah Admin (MongoDB)</h3>
+        <input type="text" id="newUser" placeholder="Username Baru">
+        <input type="password" id="newPass" placeholder="Password Baru">
+        <button class="btn" style="background:#10b981" onclick="addUser()">SIMPAN KE MONGODB</button>
+
+        <center><span style="cursor:pointer; color:gray" onclick="logout()">Logout</span></center>
+    </div>
+
+    <script>
+        async function load() {
+            const { data } = await axios.get('/api/github-db');
+            const db = JSON.parse(atob(data.content));
+            document.getElementById('list').innerHTML = db.dbny.map(n => `
+                <div class="list-item">
+                    <span>${n}</span>
+                    <span style="color:red; cursor:pointer" onclick="del('${n}')">Hapus</span>
+                </div>
+            `).reverse().join('');
+        }
+
+        async function addNum() {
+            const n = document.getElementById('num').value;
+            if(!n) return;
+            const { data } = await axios.get('/api/github-db');
+            let db = JSON.parse(atob(data.content));
+            db.dbny.push(n);
+            await axios.put('/api/github-db', {
+                message: "Add", content: btoa(JSON.stringify(db, null, 2)), sha: data.sha
+            });
+            document.getElementById('num').value = ''; load();
+        }
+
+        async function del(n) {
+            const { data } = await axios.get('/api/github-db');
+            let db = JSON.parse(atob(data.content));
+            db.dbny = db.dbny.filter(x => x !== n);
+            await axios.put('/api/github-db', {
+                message: "Del", content: btoa(JSON.stringify(db, null, 2)), sha: data.sha
+            });
+            load();
+        }
+
+        async function addUser() {
+            const u = document.getElementById('newUser').value;
+            const p = document.getElementById('newPass').value;
+            await axios.post('/api/add-user', { username: u, password: p });
+            alert("User Admin Baru Tersimpan!");
+            document.getElementById('newUser').value = ''; document.getElementById('newPass').value = '';
+        }
+
+        function logout() { localStorage.clear(); window.location.href='/'; }
+        load();
+    </script>
+</body>
+</html>
